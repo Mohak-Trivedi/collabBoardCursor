@@ -20,6 +20,18 @@ function Canvas() {
     context.lineWidth = 2;
     contextRef.current = context;
 
+    // Listen for drawing history when connecting
+    socket.on("drawing_history", (history) => {
+      history.forEach((data) => {
+        const context = contextRef.current;
+        context.strokeStyle = data.color;
+        context.beginPath();
+        context.moveTo(data.x0, data.y0);
+        context.lineTo(data.x1, data.y1);
+        context.stroke();
+      });
+    });
+
     // Listen for drawing events from other users
     socket.on("draw", (data) => {
       const context = contextRef.current;
@@ -30,8 +42,17 @@ function Canvas() {
       context.stroke();
     });
 
+    // Listen for clear canvas events
+    socket.on("clear_canvas", () => {
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
     return () => {
+      socket.off("drawing_history");
       socket.off("draw");
+      socket.off("clear_canvas");
     };
   }, []);
 
@@ -71,6 +92,7 @@ function Canvas() {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
     context.clearRect(0, 0, canvas.width, canvas.height);
+    socket.emit("clear_canvas");
   };
 
   return (
